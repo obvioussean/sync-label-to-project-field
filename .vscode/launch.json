@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch via NPM",
+            "program": "${workspaceFolder}/src/app.ts",
+            "sourceMaps": true,
+            "preLaunchTask": "tsc",
+            "internalConsoleOptions": "openOnSessionStart",
+            "envFile": "${workspaceFolder}/.env"
+        },
+    ],
+}
