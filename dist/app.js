@@ -1,10 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const project_1 = require("./project");
-const plugin_throttling_1 = require("@octokit/plugin-throttling");
-const core_1 = require("@octokit/core");
-const typeguards_1 = require("./typeguards");
-const ThrottledOctokit = core_1.Octokit.plugin(plugin_throttling_1.throttling);
+import { throttling } from '@octokit/plugin-throttling';
+import { Octokit } from '@octokit/core';
+import { Project } from './project.js';
+import { isIssue, isSingleSelectField } from './typeguards.js';
+const ThrottledOctokit = Octokit.plugin(throttling);
 const token = `${process.env.PAT_TOKEN}`;
 const octoKit = new ThrottledOctokit({
     auth: token,
@@ -23,9 +21,23 @@ const octoKit = new ThrottledOctokit({
         },
     },
 });
-const graphql = octoKit.graphql;
+const graphql = octoKit.graphql.defaults({
+    headers: {
+        "GraphQL-Features": "issue_types"
+    }
+});
+function getLabels(issue) {
+    const labels = [];
+    if (issue.issueType && issue.issueType.name) {
+        labels.push(issue.issueType.name.toLocaleLowerCase());
+    }
+    if (issue.labels && issue.labels.nodes) {
+        labels.push(...issue.labels.nodes.map(l => l.name.toLocaleLowerCase()));
+    }
+    return labels;
+}
 (async () => {
-    const project = new project_1.Project(graphql, "github", 3898);
+    const project = new Project(graphql, "github", 3898);
     await project.initialize();
     const fields = project.getFields();
     const items = await project.getItems();
@@ -49,16 +61,16 @@ const graphql = octoKit.graphql;
     // add the label overrides 
     labelOverrides.forEach((v, k) => labelToOptionMap.set(k.toLocaleLowerCase(), v));
     for (const item of items) {
-        if ((0, typeguards_1.isIssue)(item.content)) {
+        if (isIssue(item.content)) {
             const issue = item.content;
-            if (issue.labels && issue.labels.nodes) {
-                const labels = issue.labels.nodes.map(l => l.name.toLocaleLowerCase());
+            const labels = getLabels(issue);
+            if (labels.length > 0) {
                 const label = labels.find(l => labelToOptionMap.has(l));
                 console.log(`Issue ${issue.id} has labels ${JSON.stringify(labels)}, found ${label}`);
                 if (label) {
                     const option = labelToOptionMap.get(label);
                     const optionId = optionMap.get(option);
-                    const fieldValue = item.fieldValues.nodes.find(v => (0, typeguards_1.isSingleSelectField)(v) && v.field.id === field.id);
+                    const fieldValue = item.fieldValues.nodes.find(v => isSingleSelectField(v) && v.field.id === field.id);
                     if (!fieldValue || fieldValue.optionId !== optionId) {
                         console.log(`Updating issue ${issue.number}, setting field to ${option}`);
                         await project.updateProjectItemFieldValue({

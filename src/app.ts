@@ -1,8 +1,9 @@
-import { Project } from './project';
 import { throttling } from '@octokit/plugin-throttling';
 import { Octokit } from '@octokit/core';
 import { ProjectV2ItemFieldSingleSelectValue, ProjectV2SingleSelectField } from '@octokit/graphql-schema';
-import { isIssue, isSingleSelectField } from './typeguards';
+import { Project } from './project.js';
+import { isIssue, isSingleSelectField } from './typeguards.js';
+import { Issue } from './types.js';
 
 const ThrottledOctokit = Octokit.plugin(throttling);
 
@@ -32,7 +33,25 @@ const octoKit = new ThrottledOctokit({
         },
     },
 });
-const graphql = octoKit.graphql;
+const graphql = octoKit.graphql.defaults({
+    headers: {
+        "GraphQL-Features": "issue_types"
+    }
+})
+
+function getLabels(issue: Issue): string[] {
+    const labels: string[] = [];
+
+    if (issue.issueType && issue.issueType.name) {
+        labels.push(issue.issueType.name.toLocaleLowerCase());
+    }
+
+    if (issue.labels && issue.labels.nodes) {
+        labels.push(...issue.labels.nodes.map(l => l!.name.toLocaleLowerCase()));
+    }
+
+    return labels;
+}
 
 (async () => {
     const project = new Project(graphql, "github", 3898);
@@ -67,8 +86,8 @@ const graphql = octoKit.graphql;
     for (const item of items) {
         if (isIssue(item.content)) {
             const issue = item.content;
-            if (issue.labels && issue.labels.nodes) {
-                const labels = issue.labels.nodes.map(l => l!.name.toLocaleLowerCase());
+            const labels = getLabels(issue);
+            if (labels.length > 0) {
                 const label = labels.find(l => labelToOptionMap.has(l));
                 console.log(`Issue ${issue.id} has labels ${JSON.stringify(labels)}, found ${label}`);
                 if (label) {

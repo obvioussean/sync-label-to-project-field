@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Project = void 0;
-class Project {
+export class Project {
     graphql;
     owner;
     projectId;
@@ -155,6 +152,10 @@ class Project {
                                                     name
                                                 }
                                             }
+                                            issueType {
+                                                id
+                                                name
+                                            }
                                         }
                                     }
                                 }
@@ -212,5 +213,4 @@ class Project {
         return items;
     }
 }
-exports.Project = Project;
 //# sourceMappingURL=project.js.map

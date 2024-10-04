@@ -1,4 +1,5 @@
-import { Issue, ProjectV2ItemContent, ProjectV2ItemFieldSingleSelectValue, ProjectV2ItemFieldValue } from "@octokit/graphql-schema";
+import { ProjectV2ItemContent, ProjectV2ItemFieldSingleSelectValue, ProjectV2ItemFieldValue } from "@octokit/graphql-schema";
+import { Issue } from "./types.js";
 
 export function isIssue(item: ProjectV2ItemContent | null | undefined): item is Issue {
     return (item && item.__typename == "Issue") || false;

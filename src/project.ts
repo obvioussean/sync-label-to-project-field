@@ -1,5 +1,7 @@
 import { ClearProjectV2ItemFieldValueInput, CreateIssueInput, CreateIssuePayload, Issue, IssueConnection, ProjectV2, ProjectV2Field, ProjectV2FieldConfiguration, ProjectV2Item, ProjectV2ItemConnection, ProjectV2ItemFieldIterationValue, ProjectV2ItemFieldSingleSelectValue, ProjectV2IterationField, ProjectV2IterationFieldIteration, ProjectV2SingleSelectField, ProjectV2SingleSelectFieldOption, Repository, UpdateIssueInput, UpdateIssuePayload, UpdateProjectV2ItemFieldValueInput } from '@octokit/graphql-schema';
-import { GraphQlResponse, RequestParameters } from '@octokit/graphql/dist-types/types';
+import { GraphQlResponse } from '@octokit/graphql/types';
+import { RequestHeaders, RequestParameters } from '@octokit/types';
+
 
 type graphql = <ResponseData>(query: string, parameters?: RequestParameters) => GraphQlResponse<ResponseData>;
 
@@ -157,6 +159,10 @@ export class Project {
                                                     id
                                                     name
                                                 }
+                                            }
+                                            issueType {
+                                                id
+                                                name
                                             }
                                         }
                                     }

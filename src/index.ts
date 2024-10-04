@@ -2,9 +2,9 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { throttling } from '@octokit/plugin-throttling';
 import { Octokit } from '@octokit/core';
-import { Project } from './project';
+import { Project } from './project.js';
 import { ProjectV2ItemFieldSingleSelectValue, ProjectV2SingleSelectField } from '@octokit/graphql-schema';
-import { isIssue, isSingleSelectField } from './typeguards';
+import { isIssue, isSingleSelectField } from './typeguards.js';
 
 const ThrottledOctokit = Octokit.plugin(throttling);
 
@@ -35,7 +35,11 @@ async function run(): Promise<void> {
             },
         },
     });
-    const graphql = octoKit.graphql;
+    const graphql = octoKit.graphql.defaults({
+        headers: {
+            "GraphQL-Features": "issue_types"
+        }
+    })
 
     const owner = core.getInput("owner", { required: true });
     const projectId = Number(core.getInput("project-id", { required: true }));
