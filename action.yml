@@ -1,5 +1,5 @@
 name: 'Sync Issue Label to Project Field Action'
-description: 'Finds all values for the specified fields, then set's the field value on every item that has a matching label' 
+description: 'On issue create or label, tries to find a matching project item value and set it to the label' 
 runs:
   using: 'node20'
   main: 'dist/index.js'
@@ -19,9 +19,5 @@ inputs:
     description: 'The field to reference for the project'
     type: string
     required: true
-  label-overrides:
-    description: 'If multiple labels map to a single field value, include the mapping here'
-    type: string
-    required: false
   
   

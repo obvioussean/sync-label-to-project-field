@@ -1,1 +1,1 @@
-sync-label-to-project-action
+sync-label-to-project-field-action

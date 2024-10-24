@@ -1,7 +1,7 @@
 {
-  "name": "sync-label-to-project-action",
+  "name": "sync-label-to-project-field-action",
   "version": "0.0.1",
-  "description": "Finds all values for the specified fields, then set's the field value on every item that has a matching label",
+  "description": "On issue create or label, tries to find a matching project item value and set it to the label",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -14,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/obvioussean/sync-label-to-project-action.git"
+    "url": "git+https://github.com/obvioussean/sync-label-to-project-field-action.git"
   },
   "author": "obvioussean",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/obvioussean/sync-label-to-project-action/issues"
+    "url": "https://github.com/obvioussean/sync-label-to-project-field-action/issues"
   },
   "homepage": "https://github.com/obvioussean/sync-label-to-project-action#readme",
   "dependencies": {
