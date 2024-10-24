@@ -3,10 +3,25 @@ import * as github from '@actions/github';
 import { throttling } from '@octokit/plugin-throttling';
 import { Octokit } from '@octokit/core';
 import { Project } from './project.js';
-import { ProjectV2ItemFieldSingleSelectValue, ProjectV2SingleSelectField } from '@octokit/graphql-schema';
+import { ProjectV2ItemFieldSingleSelectValue, ProjectV2SingleSelectField, ProjectV2SingleSelectFieldOption } from '@octokit/graphql-schema';
 import { isIssue, isSingleSelectField } from './typeguards.js';
+import { Issue } from './types.js';
 
 const ThrottledOctokit = Octokit.plugin(throttling);
+
+function getLabels(issue: Issue, includeIssueType: boolean = true): string[] {
+    const labels: string[] = [];
+
+    if (issue.labels && issue.labels.nodes) {
+        labels.push(...issue.labels.nodes.map(l => l!.name.toLocaleLowerCase()));
+    }
+
+    if (includeIssueType && issue.issueType && issue.issueType.name) {
+        labels.push(issue.issueType.name.toLocaleLowerCase());
+    }
+
+    return labels;
+}
 
 async function run(): Promise<void> {
     const token = `${process.env.PAT_TOKEN}`;
@@ -41,64 +56,49 @@ async function run(): Promise<void> {
         }
     })
 
-    const owner = core.getInput("owner", { required: true });
-    const projectId = Number(core.getInput("project-id", { required: true }));
+    if (github.context.payload.action === 'opened' || github.context.payload.action === 'labeled') {
+        const owner = core.getInput("owner", { required: true });
+        const projectId = Number(core.getInput("project-id", { required: true }));
 
-    const project = new Project(graphql, owner, projectId);
-    await project.initialize();
+        const project = new Project(graphql, owner, projectId);
+        await project.initialize();
 
-    const fieldName = core.getInput("field-name", { required: true });
-    const field = project.getFieldByName<ProjectV2SingleSelectField>(fieldName);
+        const fieldName = core.getInput("field-name", { required: true });
+        const field = project.getFieldByName<ProjectV2SingleSelectField>(fieldName);
 
-    const labelOverrides = new Map<string, string>();
-    const overrides = core.getMultilineInput("label-overrides", { required: false });
+        const optionMap = new Map<string, ProjectV2SingleSelectFieldOption>();
+        field.options.forEach(o => optionMap.set(o.name.toLocaleLowerCase(), o));
 
-    const optionMap = new Map<string, string>();
-    field.options.forEach(o => optionMap.set(o.name.toLocaleLowerCase(), o.id));
+        const issueNumber = github.context.payload.issue!.number;
+        const repositoryName = github.context.repo.repo;
+        const item = await project.getItem(repositoryName, issueNumber);
 
-    const labelToOptionMap = new Map<string, string>();
-    // assume each option maps 1:1 to a label
-    optionMap.forEach((_, o) => labelToOptionMap.set(o, o));
-    // add the label overrides 
-    labelOverrides.forEach((v, k) => labelToOptionMap.set(k.toLocaleLowerCase(), v));
-
-    const items = await project.getItems();
-    for (const item of items) {
-        if (isIssue(item.content)) {
+        if (item && isIssue(item.content)) {
             const issue = item.content;
-            if (issue.labels && issue.labels.nodes) {
-                const labels = issue.labels.nodes.map(l => l!.name.toLocaleLowerCase());
-                const label = labels.find(l => labelToOptionMap.has(l));
-                console.log(`Issue ${issue.id} has labels ${JSON.stringify(labels)}, found ${label}`);
-                if (label) {
-                    const option = labelToOptionMap.get(label)!;
-                    const optionId = optionMap.get(option);
-                    const fieldValue = item.fieldValues.nodes!.find(v => isSingleSelectField(v) && v.field.id === field.id) as ProjectV2ItemFieldSingleSelectValue;
-                    if (!fieldValue || fieldValue.optionId !== optionId) {
-                        console.log(`Updating issue ${issue.number}, setting field to ${option}`);
-                        await project.updateProjectItemFieldValue({
-                            projectId: project.getId(),
-                            itemId: item.id,
-                            fieldId: field.id,
-                            value: {
-                                singleSelectOptionId: optionId
-                            },
-                        });
-                    } else {
-                        console.log(`Issue ${issue.number} with ${label} already set to ${fieldValue.optionId}`);
-                    }
-                } else {
-                    console.log(`Updating issue ${issue.number}, clearing the field since it has no matching label`);
-                    await project.clearProjectItemFieldValue({
+            const labels = getLabels(issue, false);
+            const matchingLabel = labels.find(l => optionMap.has(l));
+
+            if (matchingLabel) {
+                const option = optionMap.get(matchingLabel)!;
+                const optionId = option.id;
+                const fieldValue = item.fieldValues.nodes!.find(v => isSingleSelectField(v) && v.field.id === field.id) as ProjectV2ItemFieldSingleSelectValue;
+                if (!fieldValue || fieldValue.optionId !== optionId) {
+                    console.log(`Updating issue ${issue.number}, setting field to ${option.name}`);
+                    await project.updateProjectItemFieldValue({
                         projectId: project.getId(),
                         itemId: item.id,
                         fieldId: field.id,
+                        value: {
+                            singleSelectOptionId: optionId
+                        },
                     });
+                } else {
+                    console.log(`Issue ${issue.number} with ${matchingLabel} already set to ${fieldValue.optionId}`);
                 }
             }
         }
     }
-
 }
+
 
 run();
