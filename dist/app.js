@@ -26,13 +26,13 @@ const graphql = octoKit.graphql.defaults({
         "GraphQL-Features": "issue_types"
     }
 });
-function getLabels(issue) {
+function getLabels(issue, includeIssueType = true) {
     const labels = [];
-    if (issue.issueType && issue.issueType.name) {
-        labels.push(issue.issueType.name.toLocaleLowerCase());
-    }
     if (issue.labels && issue.labels.nodes) {
         labels.push(...issue.labels.nodes.map(l => l.name.toLocaleLowerCase()));
+    }
+    if (includeIssueType && issue.issueType && issue.issueType.name) {
+        labels.push(issue.issueType.name.toLocaleLowerCase());
     }
     return labels;
 }
@@ -40,60 +40,33 @@ function getLabels(issue) {
     const project = new Project(graphql, "github", 3898);
     await project.initialize();
     const fields = project.getFields();
-    const items = await project.getItems();
-    const labelOverrides = new Map();
-    labelOverrides.set("task", "feature-work");
-    labelOverrides.set("feature", "feature-work");
-    labelOverrides.set("bug", "investigation");
-    labelOverrides.set("shield", "investigation");
-    labelOverrides.set("engineering-debt", "investigation");
-    labelOverrides.set("feature flag", "feature-flag");
-    labelOverrides.set("design-initiative", "product");
-    labelOverrides.set("needs-design", "product");
-    labelOverrides.set("🎨 needs-design", "product");
-    labelOverrides.set("design-only", "product");
-    const field = fields.find(f => f.name == "Backlog category");
+    const field = fields.find(f => f.name == "Stream");
     const optionMap = new Map();
-    field.options.forEach(o => optionMap.set(o.name.toLocaleLowerCase(), o.id));
-    const labelToOptionMap = new Map();
-    // assume each option maps 1:1 to a label
-    optionMap.forEach((_, o) => labelToOptionMap.set(o, o));
-    // add the label overrides 
-    labelOverrides.forEach((v, k) => labelToOptionMap.set(k.toLocaleLowerCase(), v));
-    for (const item of items) {
-        if (isIssue(item.content)) {
-            const issue = item.content;
-            const labels = getLabels(issue);
-            if (labels.length > 0) {
-                const label = labels.find(l => labelToOptionMap.has(l));
-                console.log(`Issue ${issue.id} has labels ${JSON.stringify(labels)}, found ${label}`);
-                if (label) {
-                    const option = labelToOptionMap.get(label);
-                    const optionId = optionMap.get(option);
-                    const fieldValue = item.fieldValues.nodes.find(v => isSingleSelectField(v) && v.field.id === field.id);
-                    if (!fieldValue || fieldValue.optionId !== optionId) {
-                        console.log(`Updating issue ${issue.number}, setting field to ${option}`);
-                        await project.updateProjectItemFieldValue({
-                            projectId: project.getId(),
-                            itemId: item.id,
-                            fieldId: field.id,
-                            value: {
-                                singleSelectOptionId: optionId
-                            },
-                        });
-                    }
-                    else {
-                        console.log(`Issue ${issue.number} with ${label} already set to ${fieldValue.optionId}`);
-                    }
-                }
-                else {
-                    console.log(`Updating issue ${issue.number}, clearing the field since it has no matching label`);
-                    await project.clearProjectItemFieldValue({
+    field.options.forEach(o => optionMap.set(o.name.toLocaleLowerCase(), o));
+    const item = await project.getItem("security-center", 2613);
+    if (isIssue(item.content)) {
+        const issue = item.content;
+        const labels = getLabels(issue, false);
+        for (const label of labels) {
+            if (optionMap.has(label)) {
+                const option = optionMap.get(label);
+                const optionId = option.id;
+                const fieldValue = item.fieldValues.nodes.find(v => isSingleSelectField(v) && v.field.id === field.id);
+                if (!fieldValue || fieldValue.optionId !== optionId) {
+                    console.log(`Updating issue ${issue.number}, setting field to ${option.name}`);
+                    await project.updateProjectItemFieldValue({
                         projectId: project.getId(),
                         itemId: item.id,
                         fieldId: field.id,
+                        value: {
+                            singleSelectOptionId: optionId
+                        },
                     });
                 }
+                else {
+                    console.log(`Issue ${issue.number} with ${label} already set to ${fieldValue.optionId}`);
+                }
+                return;
             }
         }
     }
