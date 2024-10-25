@@ -34086,7 +34086,7 @@ async function run() {
         }
     });
     if (github.context.payload.action === 'opened' || github.context.payload.action === 'labeled') {
-        const owner = core.getInput("owner", { required: true });
+        const owner = core.getInput("owner-name", { required: true });
         const projectId = Number(core.getInput("project-id", { required: true }));
         const project = new Project(graphql, owner, projectId);
         await project.initialize();
