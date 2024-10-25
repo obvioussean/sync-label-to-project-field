@@ -5,11 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build-action": "ncc build src/index.ts --out ./dist",
-    "build-app": "tsc",
-    "dev": "tsc && env-cmd node dist/app.js",
-    "app": "node dist/app.js",
-    "app-env": "env-cmd node dist/app.js",
+    "build": "ncc build src/index.ts --out ./dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
