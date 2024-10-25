@@ -81,7 +81,7 @@ async function run(): Promise<void> {
             if (matchingLabel) {
                 const option = optionMap.get(matchingLabel)!;
                 const optionId = option.id;
-                const fieldValue = item.fieldValues.nodes!.find(v => isSingleSelectField(v) && v.field.id === field.id) as ProjectV2ItemFieldSingleSelectValue;
+                const fieldValue = item.fieldValues.nodes?.find(v => isSingleSelectField(v) && v.field.id === field.id) as ProjectV2ItemFieldSingleSelectValue;
                 if (!fieldValue || fieldValue.optionId !== optionId) {
                     console.log(`Updating issue ${issue.number}, setting field to ${option.name}`);
                     await project.updateProjectItemFieldValue({
@@ -96,6 +96,8 @@ async function run(): Promise<void> {
                     console.log(`Issue ${issue.number} with ${matchingLabel} already set to ${fieldValue.optionId}`);
                 }
             }
+        } else {
+            console.log(`Issue ${repositoryName}#${issueNumber} not found on project ${projectId}`);
         }
     }
 }
